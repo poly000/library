@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use library::sql;
 use rusqlite::{params, Connection, Result};
 
 pub trait Utils {
@@ -18,12 +17,7 @@ impl Utils for Connection {
             .reduce(|a, b| a + " and " + &b)
             .ok_or(rusqlite::Error::InvalidQuery)?;
 
-        let sql: String = sql!(
-            "--sql
-            select * from books where "
-        )
-        .to_owned()
-            + &keyword;
+        let sql: String = "select * from books where ".to_owned() + &keyword;
         let mut stmt = self.prepare(&sql)?;
 
         let mut books = Vec::new();
@@ -47,17 +41,13 @@ impl Utils for Connection {
     }
 
     fn query_isbn(&self, isbn: u64) -> Result<Book, rusqlite::Error> {
-        let mut stmt = self.prepare(sql!(
-            "--sql
-           select * from books where isbn = ? 
-       "
-        ))?;
+        let mut stmt = self.prepare("select * from books where books.isbn = ?")?;
 
         let mut rows = stmt.query(params![isbn])?;
 
         match rows.next()? {
             Some(row) => Ok(Book {
-                isbn: isbn,
+                isbn,
                 name: row.get(1)?,
                 authors: row.get(2)?,
                 tags: row.get(3)?,
@@ -80,11 +70,10 @@ impl Utils for Connection {
         }: Book,
     ) -> Result<()> {
         self.execute(
-            sql!(
-                "--sql
+            "
                 insert into books (isbn, name, authors, tags, lang, price) Values (?1, ?2, ?3, ?4, ?5, ?6)
     "
-            ),
+            ,
             (isbn, name, authors, tags, lang, price),
         )?;
         Ok(())
@@ -92,8 +81,7 @@ impl Utils for Connection {
 
     fn init(&self) -> Result<()> {
         self.execute(
-            sql!(
-                "--sql
+            "
             create table if not exists books (
                 isbn integer primary key,
                 name text NOT NULL,
@@ -102,8 +90,7 @@ impl Utils for Connection {
                 lang text not null,
                 price integer not null
             )
-        "
-            ),
+        ",
             (),
         )?;
         Ok(())
